@@ -1,0 +1,30 @@
+{
+  "name": "npuzzle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roblabla42/npuzzle.git"
+  },
+  "author": "roblabla",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/roblabla42/npuzzle/issues"
+  },
+  "homepage": "https://github.com/roblabla42/npuzzle#readme",
+  "dependencies": {
+    "es6-promisify": "^1.1.1",
+    "heap": "^0.2.6",
+    "line-stream": "0.0.3",
+    "ramda": "^0.13.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.11",
+    "gulp-babel": "^5.1.0",
+    "gulp-sourcemaps": "^1.5.2"
+  }
+}
