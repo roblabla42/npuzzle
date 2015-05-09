@@ -1,3 +1,4 @@
+require("source-map-support").install();
 var lpastar = require("./astar");
 
 var R = require("ramda");
@@ -8,26 +9,51 @@ if (process.argv.length < 3)
 else
   parser(process.argv[2], main);
 
+//console.log(isEnd(3, [1, 2, 3, 8, 0, 4, 7, 6, 5]));
+
 function main(err, start, X, toFind) {
+  try {
   if (err)
-    console.log("Woops, got an error", err);
+    throw err;
   else
   {
     var Y = start.length / X;
 
     if (Y !== Math.floor(Y))
       throw new Error("WTF");
-
-    console.log(start);
-    console.log(JSON.stringify(lpastar({
+    if (inv(start) % 2 === 0)
+      throw new Error("Unsolvable !");
+    var solution = lpastar({
       start: start,
-      isEnd: R.reduceIndexed((acc, elem, idx) => acc && elem == idx + 1, true),
-      neighbor: neighborWithOld.bind(null, X, Y, toFind),
+      isEnd: isEndSpiral.bind(null, X),
+      neighbor: neighborWithOld.bind(null, X, Y, 0),
       distance: R.always(1),
-      heuristic: manhattan.bind(null, X)
-    }), null, 4));
+      heuristic: manhattan.bind(null, X, spiralToIndex)
+    });
+    R.forEach(R.compose(console.log, pretty.bind(null, X)), solution.path);
+  }
+  } catch (e) {
+    console.error("Whoops, got an error: ", e.stack);
   }
 }
+
+var isEnd = R.reduceIndexed((acc, elem, idx) => acc && elem == idx + 1, true);
+
+function isEndSpiral(X, node) {
+  var good = true;
+  var Y = node.length / X;
+  doSpiral(X, Y, function(i, x, y) {
+    if (!(node[y * X + x] === i || (node[y * X + x] === 0 && i === X * Y))) {
+      good = false;
+      return true;
+    }
+  });
+  return (good);
+}
+
+var inv = R.compose(R.reduce(R.add, 0), R.mapIndexed(function (elt, i, lst) {
+  return R.reduce((acc, cur) => cur > elt ? acc + 1 : acc, 0, lst.slice(0, i));
+}));
 
 function switchX(block, pos1, pos2) {
   var newblock = block.slice(0);
@@ -50,20 +76,74 @@ function neighborWithOld(X, Y, toFind, block) {
   return (nextStates);
 }
 
-function manhattan(X, state) {
+function manhattan(X, dataToIndex, state) {
   function calculateDistance(pos1, pos2) {
     var x1 = pos1 % X;
     var y1 = Math.floor(pos1 / X);
     var x2 = pos2 % X;
     var y2 = Math.floor(pos2 / X);
+    //console.log("distance", Math.abs(x2 - x1) + Math.abs(y2 - y1));
     return (Math.abs(x2 - x1) + Math.abs(y2 - y1));
   }
   var currPos = 0;
   var j = 0;
+  var Y = state.length / X;
   while (currPos < state.length)
   {
-    j += calculateDistance(currPos, state[currPos] - 1);
+    //console.log("spiralToIndex(", state[currPos], ") = ", spiralToIndex(X, Y, state[currPos]));
+    //console.log(currPos);
+    j += calculateDistance(dataToIndex(X, Y, state[currPos]), currPos);
     currPos++;
   }
   return (j);
+}
+
+function pretty(X, state) {
+  var i = 0;
+  var line = "";
+  while (i < state.length) {
+    line += state[i] + " ";
+    if (i % X === X - 1)
+    {
+      console.log(line);
+      line = "";
+    }
+    i++;
+  }
+}
+
+function doSpiral(X, Y, fn) {
+  var Xbackup = X;
+  var x = 0, y = 0;
+  var total = X * Y;
+  X--;
+  var dx = 1, dy = 0;
+  var i = 1, j = 0;
+  while (i - 1 < total && fn(i, x, y) !== true) {
+    i++;
+    x += dx;
+    y += dy;
+    if (++j === X) {
+      if (dy < 0) { x++; y++; X -= 2 }
+      j = dx; dx = -dy; dy = j; j = 0;
+    }
+  }
+}
+
+function spiralToIndex(X, Y, toFind) {
+  var foundX = null;
+  var foundY = null;
+  if (toFind === 0)
+    toFind = X * Y;
+  doSpiral(X, Y, function(i, x, y) {
+    if (i === toFind)
+    {
+      foundX = x;
+      foundY = y;
+      return true;
+    }
+  });
+  if (foundX === null)
+    throw new Error("wut");
+  return (foundY * X + foundX);
 }

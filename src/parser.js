@@ -14,7 +14,6 @@ export default function parse(filename, cb) {
     })
     .pipe(linestream())
     .on('data', (line) => {
-      console.log(line);
       line = line.split('#', 1)[0].trim();
       if (toFind === null)
         toFind = processFirstLine(line);
@@ -30,11 +29,6 @@ export default function parse(filename, cb) {
       cb(e);
     })
     .on('end', () => {
-      if (arr.indexOf(0) !== -1)
-      {
-        arr = R.map(R.inc, arr);
-        toFind++;
-      }
       cb(null, arr, X, toFind);
     });
 };
