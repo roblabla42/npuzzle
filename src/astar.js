@@ -23,36 +23,40 @@ export default function aStar({ start, isEnd, neighbor, distance, heuristic, tim
   openHeap.push(startNode);
   openDataMap.set(hash(startNode.data), startNode);
   var startTime = new Date();
-  while (openHeap.size()) {
-    if (new Date() - startTime > timeout) {
-      return {
-        status: 'timeout',
-        cost: bestNode.g,
-        path: reconstructPath(bestNode),
-      };
-    }
+  return callbackEnd(isEnd, neighbor, distance, heuristic, timeout, hash, bestNode, closedDataSet, openHeap, openDataMap, startTime);
+}
 
-    var node = openHeap.pop();
-    openDataMap.delete(hash(node.data));
-    if (isEnd(node.data)) {
-      // done
-      return {
-        status: 'success',
-        cost: node.g,
-        path: reconstructPath(node),
-      };
-    }
-    // not done yet
-    closedDataSet.add(hash(node.data));
-    var neighbors = neighbor(node.data);
-    bestNode, openHeap, openDataMap = findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, 0);
+function callbackEnd(isEnd, neighbor, distance, heuristic, timeout, hash, bestNode, closedDataSet, openHeap, openDataMap, startTime) {
+  if (!openHeap.size()) {
+    return {
+      status: "noPath",
+      cost: bestNode.g,
+      path: reconstructPath(bestNode),
+    };
   }
+  if (new Date() - startTime > timeout) {
+    return {
+      status: 'timeout',
+      cost: bestNode.g,
+      path: reconstructPath(bestNode),
+    };
+  }
+  var node = openHeap.pop();
+  openDataMap.delete(hash(node.data));
+  if (isEnd(node.data)) {
+    // done
+    return {
+      status: 'success',
+      cost: node.g,
+      path: reconstructPath(node),
+    };
+  }
+  // not done yet
+  closedDataSet.add(hash(node.data));
+  var neighbors = neighbor(node.data);
+  bestNode, openHeap, openDataMap = findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, 0);
   // all the neighbors of every accessible node have been exhausted
-  return {
-    status: "noPath",
-    cost: bestNode.g,
-    path: reconstructPath(bestNode),
-  };
+  return callbackEnd(isEnd, neighbor, distance, heuristic, timeout, hash, bestNode, closedDataSet, openHeap, openDataMap, startTime); 
 }
 
 function findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, i) {
