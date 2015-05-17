@@ -115,13 +115,7 @@ function pretty(X, state) {
 }
 
 function doSpiral(X, Y, fn) {
-  var Xbackup = X;
-  var x = 0, y = 0;
-  var total = X * Y;
-  X--;
-  var dx = 1, dy = 0;
-  var i = 1, j = 0;
-  while (i - 1 < total && fn(i, x, y) !== true) {
+  function untilEnd(X, Y, fn, x, y, total, dx, dy, i, j) {
     i++;
     x += dx;
     y += dy;
@@ -129,7 +123,17 @@ function doSpiral(X, Y, fn) {
       if (dy < 0) { x++; y++; X -= 2 }
       j = dx; dx = -dy; dy = j; j = 0;
     }
+    if (i - 1 < total && fn(i, x, y) !== true)
+      untilEnd(X, Y, fn, x, y, total, dx, dy, i, j);
   }
+//  var Xbackup = X;
+  var x = 0, y = 0;
+  var total = X * Y;
+  X--;
+  var dx = 1, dy = 0;
+  var i = 1, j = 0;
+  if (i - 1 < total && fn(i, x, y) !== true)
+    untilEnd(X, Y, fn, x, y, total, dx, dy, i, j);
 }
 
 function spiralToIndex(X, Y, toFind) {
