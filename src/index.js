@@ -98,17 +98,20 @@ function sumDistance(X, dataToIndex, state, currPos, j, Y) {
 }
 
 function pretty(X, state) {
-  var i = 0;
-  var line = "";
-  while (i < state.length) {
+  function sumChecked(X, state, i, line) {
+    if (i >= state.length)
+      return ;
     line += state[i] + " ";
     if (i % X === X - 1)
     {
       console.log(line);
       line = "";
     }
-    i++;
+    sumChecked(X, state, ++i, line);
   }
+  var i = 0;
+  var line = "";
+  sumChecked(X, state, i, line);
 }
 
 function doSpiral(X, Y, fn) {
