@@ -77,6 +77,10 @@ function neighborWithOld(X, Y, toFind, block) {
 }
 
 function manhattan(X, dataToIndex, state) {
+  return (sumDistance(X, dataToIndex, state, 0, 0, state.length / X));
+}
+
+function sumDistance(X, dataToIndex, state, currPos, j, Y) {
   function calculateDistance(pos1, pos2) {
     var x1 = pos1 % X;
     var y1 = Math.floor(pos1 / X);
@@ -85,17 +89,12 @@ function manhattan(X, dataToIndex, state) {
     //console.log("distance", Math.abs(x2 - x1) + Math.abs(y2 - y1));
     return (Math.abs(x2 - x1) + Math.abs(y2 - y1));
   }
-  var currPos = 0;
-  var j = 0;
-  var Y = state.length / X;
-  while (currPos < state.length)
-  {
-    //console.log("spiralToIndex(", state[currPos], ") = ", spiralToIndex(X, Y, state[currPos]));
-    //console.log(currPos);
-    j += calculateDistance(dataToIndex(X, Y, state[currPos]), currPos);
-    currPos++;
-  }
-  return (j);
+  if (currPos >= state.length)
+    return (j); 
+  //console.log("spiralToIndex(", state[currPos], ") = ", spiralToIndex(X, Y, state[currPos]));
+  //console.log(currPos);
+  j += calculateDistance(dataToIndex(X, Y, state[currPos]), currPos);
+  return (sumDistance(X, dataToIndex, state, ++currPos, j, Y));
 }
 
 function pretty(X, state) {
