@@ -31,6 +31,7 @@ export default function aStar({ start, isEnd, neighbor, distance, heuristic, tim
         path: reconstructPath(bestNode),
       };
     }
+
     var node = openHeap.pop();
     openDataMap.delete(hash(node.data));
     if (isEnd(node.data)) {
@@ -44,42 +45,7 @@ export default function aStar({ start, isEnd, neighbor, distance, heuristic, tim
     // not done yet
     closedDataSet.add(hash(node.data));
     var neighbors = neighbor(node.data);
-    for (var i = 0; i < neighbors.length; i++) {
-      var neighborData = neighbors[i];
-      if (closedDataSet.has(hash(neighborData))) {
-        // skip closed neighbors
-        continue;
-      }
-      var gFromThisNode = node.g + distance(node.data, neighborData);
-      var neighborNode = openDataMap.get(hash(neighborData));
-      var update = false;
-      if (neighborNode === undefined) {
-        // add neighbor to the open set
-        neighborNode = {
-          data: neighborData,
-        };
-        // other properties will be set later
-        openDataMap.set(hash(neighborData), neighborNode);
-      } else {
-        if (neighborNode.g < gFromThisNode) {
-          // skip this one because another route is faster
-          continue;
-        }
-        update = true;
-      }
-      // found a new or better route.
-      // update this neighbor with this node as its new parent
-      neighborNode.parent = node;
-      neighborNode.g = gFromThisNode;
-      neighborNode.h = heuristic(neighborData);
-      neighborNode.f = gFromThisNode + neighborNode.h;
-      if (neighborNode.h < bestNode.h) bestNode = neighborNode;
-      if (update) {
-        openHeap.heapify();
-      } else {
-        openHeap.push(neighborNode);
-      }
-    }
+    bestNode, openHeap, openDataMap = findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, 0);
   }
   // all the neighbors of every accessible node have been exhausted
   return {
@@ -87,6 +53,44 @@ export default function aStar({ start, isEnd, neighbor, distance, heuristic, tim
     cost: bestNode.g,
     path: reconstructPath(bestNode),
   };
+}
+
+function findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, i) {
+  if (i >= neighbors.length)
+    return bestNode, openHeap, openDataMap;  
+  var neighborData = neighbors[i];
+  if (closedDataSet.has(hash(neighborData)))
+    return findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, i + 1);
+  var gFromThisNode = node.g + distance(node.data, neighborData);
+  var neighborNode = openDataMap.get(hash(neighborData));
+  var update = false;
+  if (neighborNode === undefined) {
+    // add neighbor to the open set
+    neighborNode = {
+      data: neighborData,
+    };
+    // other properties will be set later
+    openDataMap.set(hash(neighborData), neighborNode);
+  } else {
+    if (neighborNode.g < gFromThisNode) {
+      // skip this one because another route is faster
+      return findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, i + 1);
+    }
+    update = true;
+  }
+  // found a new or better route.
+  // update this neighbor with this node as its new parent
+  neighborNode.parent = node;
+  neighborNode.g = gFromThisNode;
+  neighborNode.h = heuristic(neighborData);
+  neighborNode.f = gFromThisNode + neighborNode.h;
+  if (neighborNode.h < bestNode.h) bestNode = neighborNode;
+  if (update) {
+    openHeap.heapify();
+  } else {
+    openHeap.push(neighborNode);
+  }
+  return findNeighborsData(heuristic, distance, hash, bestNode, closedDataSet, openHeap, openDataMap, node, neighbors, i + 1);
 }
 
 function reconstructPath(node) {
