@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "gulp"
   },
   "repository": {
     "type": "git",
@@ -17,11 +18,14 @@
   },
   "homepage": "https://github.com/roblabla42/npuzzle#readme",
   "dependencies": {
+    "babel-runtime": "^5.4.3",
     "es6-promisify": "^1.1.1",
+    "gulp-util": "^3.0.4",
     "heap": "^0.2.6",
     "line-stream": "0.0.3",
     "ramda": "^0.13.0",
     "range-gen": "^1.0.0",
+    "source-map-support": "^0.2.10",
     "yargs": "^3.8.0"
   },
   "devDependencies": {

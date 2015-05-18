@@ -51,7 +51,7 @@ else
   else
     stream = process.stdin;
   var { arr, X } = await parser(stream);
-  main(lpastar, R.always(1), require("./heuristics/" + argv.h), makeGoal, arr, X);
+  await main(lpastar, R.always(1), require("./heuristics/" + argv.h), makeGoal, arr, X);
   })().then(null, function(err) {
     setImmediate(function() {
       throw err;
@@ -60,7 +60,7 @@ else
 }
 //console.log(isEnd(3, [1, 2, 3, 8, 0, 4, 7, 6, 5]));
 
-function main(algorithm, distance, heuristic, makeGoal, start, X) {
+async function main(algorithm, distance, heuristic, makeGoal, start, X) {
   try {
     var Y = start.length / X;
     if (Y !== Math.floor(Y))
@@ -77,14 +77,14 @@ function main(algorithm, distance, heuristic, makeGoal, start, X) {
         || (isEven(X) && (isOdd(blankRow(start, X)) === cmp(inv(start))))))
       throw new Error("Unsolvable !");
 
-    var solution = algorithm({
+    var solution = await algorithm({
       start: start,
       isEnd: R.eqDeep(goal),
       neighbor: neighborWithOld.bind(null, X, Y, 0),
       distance: distance.bind(null, X),
       heuristic: heuristic.bind(null, X, goal)
     });
-    R.forEach(R.compose(() => console.log(), pretty.bind(null, X)), solution.path);
+    R.forEach(pretty.bind(null, X), solution.path);
   } catch (e) {
     console.error("Whoops, got an error: ", e.stack);
   }
@@ -117,6 +117,20 @@ function neighborWithOld(X, Y, toFind, block) {
   return (nextStates);
 }
 
+function prettyNew(X, state) {
+  var i = 0;
+  var line = "";
+  while (i < state.length) {
+    line += state[i] + " ";
+    if (i % X === X - 1)
+    {
+      console.log(line);
+      line = "";
+    }
+    i++;
+  }
+}
+
 function pretty(X, state) {
   var i = 0;
   var line = "";
@@ -135,15 +149,12 @@ function pretty(X, state) {
     }
     i++;
   }
+  console.log();
 }
 
+
 function doSpiral(X, Y, fn) {
-  var x = 0, y = 0;
-  var total = X * Y;
-  X--;
-  var dx = 1, dy = 0;
-  var i = 1, j = 0;
-  while (i - 1 < total && fn(i, x, y) !== true) {
+  function untilEnd(X, Y, fn, x, y, total, dx, dy, i, j) {
     i++;
     x += dx;
     y += dy;
@@ -151,7 +162,17 @@ function doSpiral(X, Y, fn) {
       if (dy < 0) { x++; y++; X -= 2 }
       j = dx; dx = -dy; dy = j; j = 0;
     }
+    if (i - 1 < total && fn(i, x, y) !== true)
+      untilEnd(X, Y, fn, x, y, total, dx, dy, i, j);
   }
+//  var Xbackup = X;
+  var x = 0, y = 0;
+  var total = X * Y;
+  X--;
+  var dx = 1, dy = 0;
+  var i = 1, j = 0;
+  if (i - 1 < total && fn(i, x, y) !== true)
+    untilEnd(X, Y, fn, x, y, total, dx, dy, i, j);
 }
 
 function makeGoalSpiral(start, X, Y) {
