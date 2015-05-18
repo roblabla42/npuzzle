@@ -12,7 +12,7 @@ var options = {
 
 gulp.task('compile', function() {
     gulp
-        .src('src/*.js')
+        .src('src/**/*.js')
         .pipe(plumber({
           errorHandler: function(err) {
             console.log(err.toString());
@@ -29,7 +29,7 @@ gulp.task('compile', function() {
 });
 
 gulp.task('watch', function() {
-    gulp.watch('src/*.js', ['compile']);
+    gulp.watch('src/**/*.js', ['compile']);
 });
 
 gulp.task('default', ['compile']);

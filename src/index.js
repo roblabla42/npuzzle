@@ -1,61 +1,102 @@
 require("source-map-support").install();
-var lpastar = require("./astar");
+var argv = require("yargs")
+  .usage('Usage: $0 <command> [options]')
+  .command('solve', 'Solve an npuzzle')
+  .command('generate', 'Generate an npuzzle')
+  .demand(1)
+  .options('f', {
+    alias: 'file',
+    describe: 'Use given file as map. Defaults to stdin',
+    type: 'string'
+  })
+  .options('g', {
+    alias: 'goal',
+    describe: 'The goal type. One of "spiral", "normal", or a file',
+    default: 'spiral',
+    type: 'string'
+  })
+  .options('h', {
+    alias: 'heuristic',
+    describe: 'The heuristic function to use. One of "manhattan", or a nodejs module name',
+    default: 'manhattan',
+    type: 'string'
+  })
+  .strict()
+  .argv;
 
+var fs = require("fs");
 var R = require("ramda");
 var parser = require("./parser");
 
-if (process.argv.length < 3)
-  console.log("Usage: node dist/index.js [map]");
-else
-  parser(process.argv[2], main);
+var lpastar = require("./astar");
+var coerceToBool = R.compose(R.not, R.not);
+var isOdd = R.compose(coerceToBool, R.modulo(R.__, 2));
+var isEven = R.complement(isOdd);
 
+if (argv._[0] === "generate")
+  require("./cmd/generate")(argv);
+else
+{
+  (async function() {
+  var makeGoal;
+  var stream;
+  if (argv.g === "spiral")
+    makeGoal = makeGoalSpiral;
+  else if (argv.g !== "normal")
+    makeGoal = await makeGoalFile(argv.g);
+  else
+    makeGoal = makeGoalNormal;
+  if (argv.file)
+    stream = fs.createReadStream(argv.file);
+  else
+    stream = process.stdin;
+  var { arr, X } = await parser(stream);
+  main(lpastar, R.always(1), require("./heuristics/" + argv.h), makeGoal, arr, X);
+  })().then(null, function(err) {
+    setImmediate(function() {
+      throw err;
+    });
+  });
+}
 //console.log(isEnd(3, [1, 2, 3, 8, 0, 4, 7, 6, 5]));
 
-function main(err, start, X, toFind) {
+function main(algorithm, distance, heuristic, makeGoal, start, X) {
   try {
-  if (err)
-    throw err;
-  else
-  {
     var Y = start.length / X;
-
     if (Y !== Math.floor(Y))
-      throw new Error("WTF");
-    if (inv(start) % 2 === 0)
+      throw new Error("Invalid map : it needs to be a rectangle");
+
+    var goal = makeGoal(start, X, Y);
+    console.log("Goal is");
+    pretty(X, goal);
+    if (start.length != goal.length)
+      throw new Error("Invalid goal : goal is not of the same size");
+
+    var cmp = isEven(inv(goal)) ? isEven : isOdd;
+    if (!(isOdd(X) && cmp(inv(start))
+        || (isEven(X) && (isOdd(blankRow(start, X)) === cmp(inv(start))))))
       throw new Error("Unsolvable !");
-    var solution = lpastar({
+
+    var solution = algorithm({
       start: start,
-      isEnd: isEndSpiral.bind(null, X),
+      isEnd: R.eqDeep(goal),
       neighbor: neighborWithOld.bind(null, X, Y, 0),
-      distance: R.always(1),
-      heuristic: manhattan.bind(null, X, spiralToIndex)
+      distance: distance.bind(null, X),
+      heuristic: heuristic.bind(null, X, goal)
     });
-    R.forEach(R.compose(console.log, pretty.bind(null, X)), solution.path);
-  }
+    R.forEach(R.compose(() => console.log(), pretty.bind(null, X)), solution.path);
   } catch (e) {
     console.error("Whoops, got an error: ", e.stack);
   }
 }
 
-var isEnd = R.reduceIndexed((acc, elem, idx) => acc && elem == idx + 1, true);
-
-function isEndSpiral(X, node) {
-  var good = true;
-  var Y = node.length / X;
-  doSpiral(X, Y, function(i, x, y) {
-    if (!(node[y * X + x] === i || (node[y * X + x] === 0 && i === X * Y))) {
-      good = false;
-      return true;
-    }
-  });
-  return (good);
-}
+var blankRow = (start, X, toFind) => (X - start.indexOf(toFind) / X);
 
 var inv = R.compose(R.reduce(R.add, 0), R.mapIndexed(function (elt, i, lst) {
-  return R.reduce((acc, cur) => cur > elt ? acc + 1 : acc, 0, lst.slice(0, i));
+  return R.reduce((acc, cur) => elt > cur && cur !== 0 ? acc + 1 : acc, 0, lst.slice(i+1));
 }));
 
-function switchX(block, pos1, pos2) {
+function swap(block, pos1, pos2) {
   var newblock = block.slice(0);
   var tmp = newblock[pos1];
   newblock[pos1] = newblock[pos2];
@@ -69,42 +110,26 @@ function neighborWithOld(X, Y, toFind, block) {
   }
   var nextStates = [];
   var pos = block.indexOf(toFind);
-  addStateIf(pos % X > 0, switchX(block, pos, pos - 1));
-  addStateIf(pos % X < X - 1, switchX(block, pos, pos + 1));
-  addStateIf(Math.floor(pos / X) > 0, switchX(block, pos, pos - X));
-  addStateIf(Math.floor(pos / X) < Y - 1, switchX(block, pos, pos + X));
+  addStateIf(pos % X > 0, swap(block, pos, pos - 1));
+  addStateIf(pos % X < X - 1, swap(block, pos, pos + 1));
+  addStateIf(Math.floor(pos / X) > 0, swap(block, pos, pos - X));
+  addStateIf(Math.floor(pos / X) < Y - 1, swap(block, pos, pos + X));
   return (nextStates);
-}
-
-function manhattan(X, dataToIndex, state) {
-  function calculateDistance(pos1, pos2) {
-    var x1 = pos1 % X;
-    var y1 = Math.floor(pos1 / X);
-    var x2 = pos2 % X;
-    var y2 = Math.floor(pos2 / X);
-    //console.log("distance", Math.abs(x2 - x1) + Math.abs(y2 - y1));
-    return (Math.abs(x2 - x1) + Math.abs(y2 - y1));
-  }
-  var currPos = 0;
-  var j = 0;
-  var Y = state.length / X;
-  while (currPos < state.length)
-  {
-    //console.log("spiralToIndex(", state[currPos], ") = ", spiralToIndex(X, Y, state[currPos]));
-    //console.log(currPos);
-    j += calculateDistance(dataToIndex(X, Y, state[currPos]), currPos);
-    currPos++;
-  }
-  return (j);
 }
 
 function pretty(X, state) {
   var i = 0;
   var line = "";
+  var maxNbrSize = 1;
+  console.log(state);
   while (i < state.length) {
-    line += state[i] + " ";
-    if (i % X === X - 1)
-    {
+    if (maxNbrSize < Math.floor(Math.log10(state[i])))
+      maxNbrSize = Math.floor(Math.log10(state[i]));
+    i++;
+  }
+  while (i < state.length) {
+    line += " ".repeat(maxNbrSize - Math.floor(Math.log10(state[i]))) + state[i];
+    if (i % X === X - 1) {
       console.log(line);
       line = "";
     }
@@ -113,7 +138,6 @@ function pretty(X, state) {
 }
 
 function doSpiral(X, Y, fn) {
-  var Xbackup = X;
   var x = 0, y = 0;
   var total = X * Y;
   X--;
@@ -130,20 +154,31 @@ function doSpiral(X, Y, fn) {
   }
 }
 
-function spiralToIndex(X, Y, toFind) {
-  var foundX = null;
-  var foundY = null;
-  if (toFind === 0)
-    toFind = X * Y;
-  doSpiral(X, Y, function(i, x, y) {
-    if (i === toFind)
-    {
-      foundX = x;
-      foundY = y;
-      return true;
-    }
+function makeGoalSpiral(start, X, Y) {
+  var arr = [];
+  doSpiral(X, Y, (i, x, y) => arr[y * X + x] = i == X * Y ? 0 : i);
+  return (arr);
+}
+
+function makeGoalNormal(start, X, Y) {
+  var arr = [];
+  var i = 1;
+  while (i <= X * Y)
+  {
+    arr[i - 1] = i;
+    i++;
+  }
+  arr[arr.length-1] = 0;
+  return (arr);
+}
+
+function makeGoalFile(file, start, X, Y) {
+  return new Promise(function (resolve, reject) {
+    parser(fs.createReadStream(file), function (err, arr) {
+      if (err)
+        reject(err);
+      else
+        resolve(() => arr);
+    });
   });
-  if (foundX === null)
-    throw new Error("wut");
-  return (foundY * X + foundX);
 }

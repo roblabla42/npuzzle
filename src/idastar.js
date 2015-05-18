@@ -1,14 +1,11 @@
 /*var assert = require('assert')
   , Heap = require('heap')
 
-function search(ctx) {
-  var f = g + heuristic(node.data);
-  if (f > bound)
-    return f;
-  else if (isEnd(node.data))
-    return FOUND;
-  var min = Infinity;
-  neighbor(
+function dfs(n, bound) {
+  var naturalFailure;
+  do {
+    
+  } while (!naturalFailure)
 }
 
 export default function idaStar({ start, isEnd, neighbor, distance, heuristic, timeout = Infinity, hash = defaultHash } = {}) {

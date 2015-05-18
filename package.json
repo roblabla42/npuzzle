@@ -20,7 +20,9 @@
     "es6-promisify": "^1.1.1",
     "heap": "^0.2.6",
     "line-stream": "0.0.3",
-    "ramda": "^0.13.0"
+    "ramda": "^0.13.0",
+    "range-gen": "^1.0.0",
+    "yargs": "^3.8.0"
   },
   "devDependencies": {
     "gulp": "^3.8.11",
