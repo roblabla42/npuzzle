@@ -1,4 +1,4 @@
-import range from "range_gen";
+import range from "range-gen";
 import manhattan from "./manhattan";
 
 export default function linearConflict(X, goal, state)

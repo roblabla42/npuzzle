@@ -1,4 +1,4 @@
-//import range from "range-gen";
+import range from "../range_it";
 import manhattan from "./manhattan";
 
 export default function linearConflict(X, goal, state)
@@ -13,11 +13,10 @@ function linearConflictVert(dir, X, goal, state)
 {
   var conflicts = 0;
   var row = 0;
-  while (row < goal.length / X)
+  for (var row of range(goal.length / X))
   {
     var max = -1;
-    var col = 0;
-    while (col < X)
+    for (var col of range(X))
     {
       var cellVal = state[row * X + col];
       if (cellVal != 0 && goal.indexOf(cellVal) / X === row) // TODO : I could make a map here...
@@ -27,9 +26,7 @@ function linearConflictVert(dir, X, goal, state)
         else
           conflicts += 2;
       }
-      col++;
     }
-    row++;
   }
   return (conflicts);
 }
@@ -37,12 +34,10 @@ function linearConflictVert(dir, X, goal, state)
 function linearConflictHoriz(dir, X, goal, state)
 {
   var conflicts = 0;
-  var col = 0;
-  while (col < X)
+  for (var col of range(X))
   {
     var max = -1;
-    var row = 0;
-    while (row < goal.length / X)
+    for (var row of range(goal.length / X))
     {
       var cellVal = state[row * X + col];
       if (cellVal != 0 && goal.indexOf(cellVal) % X === col)
@@ -52,9 +47,7 @@ function linearConflictHoriz(dir, X, goal, state)
         else
           conflicts += 2;
       }
-      row++;
     }
-    col++;
   }
   return (conflicts);
 }
